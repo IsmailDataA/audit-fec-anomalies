@@ -115,6 +115,63 @@
   </section>
 
 </div></main>
-<footer>Projet réalisé par <a href="https://ismaildataa.github.io">Ismail Yahyaoui</a> — Data Analyst · Python · Statistiques · Audit analytique</footer>
-</body>
+<footer>Projet réalisé par <a href="https://ismaildataa.github.io">Ismail Yahyaoui</a> — Data Analyst · Python · Statistiques · Audit analytique<span style="display:block;margin-top:6px">Mesure d'audience anonyme, sans cookie (Umami). Aucune donnée personnelle n'est collectée.</span></footer>
+{% raw %}<!-- Mesure d'audience anonyme, sans cookie (Umami) -->
+<script defer src="https://cloud.umami.is/script.js" data-website-id="98fe5966-5eda-4bf5-8e18-b79ec83492bb" data-domains="ismaildataa.github.io"></script>
+<script>
+(function () {
+  function track(name, data) { if (window.umami && umami.track) umami.track(name, data); }
+
+  // Lien personnalisé envoyé avec une candidature : ?ref=nom-entreprise
+  var ref = new URLSearchParams(location.search).get('ref');
+  if (ref) {
+    var tries = 0, wait = setInterval(function () {
+      if (window.umami || ++tries > 25) { clearInterval(wait); track('lien-candidature', { entreprise: ref.slice(0, 60).toLowerCase() }); }
+    }, 200);
+  }
+
+  // Clics importants
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a');
+    if (!a) return;
+    var h = a.getAttribute('href') || '', ev = null, data = {};
+    if (/CV_Ismail/i.test(h)) ev = 'telechargement-cv';
+    else if (h.indexOf('mailto:') === 0) ev = 'clic-email';
+    else if (h.indexOf('tel:') === 0) ev = 'clic-telephone';
+    else if (/linkedin\.com/.test(h)) ev = 'clic-linkedin';
+    else if (/github\.com\/ismaildataa\/?$/.test(h)) ev = 'clic-profil-github';
+    else if (/github\.com\/ismaildataa\/./.test(h)) { ev = 'clic-code-github'; data.projet = h.split('/')[4]; }
+    else if (/ismaildataa\.github\.io\/?$/.test(h)) ev = 'clic-portfolio';
+    else if (/ismaildataa\.github\.io\/[a-z-]+\/?/.test(h)) { ev = 'ouverture-rapport'; data.projet = h.split('/')[3]; }
+    else if (/lookerstudio/.test(h)) ev = 'clic-dashboard-esport';
+    else if (/youtube\.com|liquipedia/.test(h)) ev = 'clic-esport-externe';
+    else if (/\.(pdf|jpg|png|html)$/i.test(h)) { ev = 'ouverture-document'; data.document = h.split('/').pop(); }
+    else if (h.charAt(0) === '#') { ev = 'navigation'; data.cible = h.slice(1) || 'haut'; }
+    if (!ev) return;
+    var sec = a.closest('section');
+    data.emplacement = a.closest('nav') ? 'menu' : a.closest('header') ? 'haut-de-page' : sec ? (sec.id || 'section') : 'pied-de-page';
+    track(ev, data);
+  });
+
+  // Sections réellement vues (quand elles passent au milieu de l'écran)
+  if ('IntersectionObserver' in window) {
+    var seen = {};
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        var id = en.target.id;
+        if (en.isIntersecting && id && !seen[id]) { seen[id] = 1; track('section-vue', { section: id }); }
+      });
+    }, { rootMargin: '0px 0px -50% 0px', threshold: 0 });
+    document.querySelectorAll('section[id]').forEach(function (s) { io.observe(s); });
+  }
+
+  // Profondeur de lecture
+  var marks = [25, 50, 75, 100], done = {};
+  window.addEventListener('scroll', function () {
+    var d = document.documentElement, p = 100 * (d.scrollTop + innerHeight) / d.scrollHeight;
+    marks.forEach(function (m) { if (p >= m - 1 && !done[m]) { done[m] = 1; track('defilement', { pourcentage: m }); } });
+  }, { passive: true });
+})();
+</script>
+{% endraw %}</body>
 </html>
