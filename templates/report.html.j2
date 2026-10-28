@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit FEC — rapport</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--ink:#0f1720;--ink2:#4a5563;--muted:#7a8494;--line:#e3e6eb;--accent:#2a78d6;--navy:#13294b;--ok:#0a7d32;--ko:#c0352f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--navy);color:#fff;padding:40px 16px 34px}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+  header .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+  header h1{margin:6px 0 8px;font-size:30px;line-height:1.2}
+  header p{margin:0;opacity:.85;max-width:720px}
+  header a{color:#9cc4f2}
+  main{padding:28px 0 60px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:26px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .kpi .v{font-size:28px;font-weight:700;letter-spacing:-.01em}
+  .kpi .l{color:var(--ink2);font-size:13px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:18px}
+  section h2{margin:0 0 6px;font-size:19px}
+  section .lead{color:var(--ink2);margin:0 0 16px}
+  img{max-width:100%;height:auto;display:block;margin:10px 0 4px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--ink2);font-weight:600;background:#fafbfc}
+  td.n,th.n{text-align:right}
+  .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
+  .ok{background:#e4f4ea;color:var(--ok)} .ko{background:#fbe7e6;color:var(--ko)}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+  .flow span{background:#eef3fa;border:1px solid #d6e2f2;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--navy)}
+  .flow i{color:var(--muted);font-style:normal}
+  .scroll{overflow-x:auto}
+  footer{color:var(--muted);font-size:13px;text-align:center;padding:10px 16px 40px}
+  footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="eyebrow">Projet data · Audit analytique & détection d'anomalies</div>
+  <h1>Audit automatisé des écritures comptables (FEC)</h1>
+  <p>{{ n_lines }} lignes, {{ n_entries }} écritures, {{ n_journaux }} journaux — exercice {{ exercice }}.
+     FEC fictif mais au format réglementaire DGFiP ; l'outil s'utilise tel quel sur un vrai FEC.
+     <a href="{{ repo_url }}">Code source sur GitHub →</a></p>
+</div></header>
+<main><div class="wrap">
+
+  <div class="kpis">
+    {% if m %}
+    <div class="kpi"><div class="v">{{ m.recall_sample }} %</div><div class="l">des anomalies trouvées en contrôlant {{ sample }} écritures ({{ pct_sample }} % du total)</div></div>
+    <div class="kpi"><div class="v">{{ m.random_sample }} %</div><div class="l">avec un échantillon aléatoire de même taille</div></div>
+    <div class="kpi"><div class="v">{{ m.p100 }} %</div><div class="l">de vraies anomalies dans le top 100 (vs {{ m.p100_ml }} % avec le ML seul)</div></div>
+    {% endif %}
+    <div class="kpi"><div class="v">{{ summary|length }}</div><div class="l">tests d'audit + Benford + Isolation Forest</div></div>
+    <div class="kpi"><div class="v">{{ duree }} s</div><div class="l">pour auditer l'exercice complet</div></div>
+  </div>
+
+  <section>
+    <h2>La démarche</h2>
+    <p class="lead">Un auditeur ne peut pas vérifier 26 000 écritures. L'outil les classe par niveau de risque pour constituer un échantillon <strong>ciblé</strong> plutôt qu'aléatoire.</p>
+    <div class="flow"><span>Lecture du FEC</span><i>→</i><span>Conformité DGFiP</span><i>→</i><span>{{ summary|length }} tests d'audit pondérés</span><i>→</i><span>Loi de Benford</span><i>→</i><span>Isolation Forest</span><i>→</i><span>Score de risque</span><i>→</i><span>Échantillon Excel</span></div>
+  </section>
+
+  {% if m %}
+  <section>
+    <h2>Le gain pour l'auditeur</h2>
+    <p class="lead">En contrôlant les {{ sample }} écritures les plus risquées, on retrouve {{ m.recall_sample }} % des {{ m.n_injected }} anomalies injectées, contre {{ m.random_sample }} % au hasard. Les règles d'audit et le machine learning sont complémentaires : le ML seul est nettement moins efficace.</p>
+    <img src="img/courbe_capture.png" alt="Courbe de capture des anomalies">
+  </section>
+  {% endif %}
+
+  <section>
+    <h2>Loi de Benford : repérer des montants « inventés »</h2>
+    <p class="lead">Dans des données comptables naturelles, le premier chiffre des montants suit la loi de Benford (≈ 30 % de « 1 »). L'ensemble des achats est conforme (MAD {{ mad_g }}, {{ verdict_g|lower }}), mais en mesurant la contribution de chaque fournisseur à l'écart, <strong>{{ sup_top }}</strong> ressort en tête : ses montants commencent anormalement souvent par 7, 8 ou 9. C'est une piste d'investigation, pas une preuve.</p>
+    <img src="img/benford.png" alt="Distribution du premier chiffre comparée à la loi de Benford">
+  </section>
+
+  <section>
+    <h2>Top 20 des écritures à contrôler</h2>
+    <div class="scroll"><table>
+      <tr><th>Écriture</th><th>Date</th><th>Journal</th><th>Tiers</th><th class="n">Montant</th><th class="n">Score</th><th>Motifs</th></tr>
+      {% for r in top20 %}
+      <tr><td>{{ r.EcritureNum }}</td><td>{{ r.EcritureDate }}</td><td>{{ r.JournalCode }}</td><td>{{ r.tiers }}</td>
+          <td class="n">{{ r.montant }}</td><td class="n">{{ r.score_risque }}</td><td>{{ r.motifs }}</td></tr>
+      {% endfor %}
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Résultats par test d'audit</h2>
+    {% if m %}
+    <p class="lead">Certains tests signalent plus d'écritures que d'anomalies injectées : c'est attendu. Une facture légitime peut tomber juste sous le seuil de validation ; c'est au contrôleur de trancher, l'outil lui dit où regarder.</p>
+    <div class="scroll"><table>
+      <tr><th>Test</th><th class="n">Injectées</th><th class="n">Signalées</th><th class="n">Trouvées</th><th class="n">Rappel</th></tr>
+      {% for r in m.per_type %}
+      <tr><td>{{ r.libelle }}</td><td class="n">{{ r.injectees }}</td><td class="n">{{ r.signalees }}</td><td class="n">{{ r.trouvees }}</td><td class="n">{{ r.rappel }} %</td></tr>
+      {% endfor %}
+    </table></div>
+    {% else %}
+    <img src="img/tests_audit.png" alt="Écritures signalées par test">
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Conformité du fichier</h2>
+    <p class="lead">{{ n_conf_ko }} contrôle(s) en échec sur {{ conf|length }}.</p>
+    <div class="scroll"><table>
+      <tr><th>Contrôle</th><th>Détail</th><th>Statut</th></tr>
+      {% for r in conf %}
+      <tr><td>{{ r.controle }}</td><td>{{ r.detail }}</td><td><span class="tag {{ 'ok' if r.statut == 'OK' else 'ko' }}">{{ r.statut }}</span></td></tr>
+      {% endfor %}
+    </table></div>
+  </section>
+
+</div></main>
+<footer>Projet réalisé par <a href="https://ismaildataa.github.io">Ismail Yahyaoui</a> — Data Analyst · Python · Statistiques · Audit analytique</footer>
+</body>
+</html>

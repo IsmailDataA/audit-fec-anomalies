@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Audit FEC — rapport</title>
+<style>
+  :root{--bg:#f6f7f9;--card:#fff;--ink:#0f1720;--ink2:#4a5563;--muted:#7a8494;--line:#e3e6eb;--accent:#2a78d6;--navy:#13294b;--ok:#0a7d32;--ko:#c0352f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{background:var(--navy);color:#fff;padding:40px 16px 34px}
+  .wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+  header .eyebrow{font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.75}
+  header h1{margin:6px 0 8px;font-size:30px;line-height:1.2}
+  header p{margin:0;opacity:.85;max-width:720px}
+  header a{color:#9cc4f2}
+  main{padding:28px 0 60px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:26px}
+  .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px 18px}
+  .kpi .v{font-size:28px;font-weight:700;letter-spacing:-.01em}
+  .kpi .l{color:var(--ink2);font-size:13px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:18px}
+  section h2{margin:0 0 6px;font-size:19px}
+  section .lead{color:var(--ink2);margin:0 0 16px}
+  img{max-width:100%;height:auto;display:block;margin:10px 0 4px}
+  table{width:100%;border-collapse:collapse;font-size:13.5px;font-variant-numeric:tabular-nums}
+  th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left}
+  th{color:var(--ink2);font-weight:600;background:#fafbfc}
+  td.n,th.n{text-align:right}
+  .tag{display:inline-block;padding:1px 8px;border-radius:99px;font-size:12px;font-weight:600}
+  .ok{background:#e4f4ea;color:var(--ok)} .ko{background:#fbe7e6;color:var(--ko)}
+  .flow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+  .flow span{background:#eef3fa;border:1px solid #d6e2f2;border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;color:var(--navy)}
+  .flow i{color:var(--muted);font-style:normal}
+  .scroll{overflow-x:auto}
+  footer{color:var(--muted);font-size:13px;text-align:center;padding:10px 16px 40px}
+  footer a{color:var(--accent)}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <div class="eyebrow">Projet data · Audit analytique & détection d'anomalies</div>
+  <h1>Audit automatisé des écritures comptables (FEC)</h1>
+  <p>67 724 lignes, 26 733 écritures, 5 journaux — exercice 02/01/2025 – 31/12/2025.
+     FEC fictif mais au format réglementaire DGFiP ; l'outil s'utilise tel quel sur un vrai FEC.
+     <a href="https://github.com/ismaildataa/audit-fec-anomalies">Code source sur GitHub →</a></p>
+</div></header>
+<main><div class="wrap">
+
+  <div class="kpis">
+    
+    <div class="kpi"><div class="v">99,4 %</div><div class="l">des anomalies trouvées en contrôlant 300 écritures (1,1 % du total)</div></div>
+    <div class="kpi"><div class="v">0,6 %</div><div class="l">avec un échantillon aléatoire de même taille</div></div>
+    <div class="kpi"><div class="v">92 %</div><div class="l">de vraies anomalies dans le top 100 (vs 27 % avec le ML seul)</div></div>
+    
+    <div class="kpi"><div class="v">7</div><div class="l">tests d'audit + Benford + Isolation Forest</div></div>
+    <div class="kpi"><div class="v">6 s</div><div class="l">pour auditer l'exercice complet</div></div>
+  </div>
+
+  <section>
+    <h2>La démarche</h2>
+    <p class="lead">Un auditeur ne peut pas vérifier 26 000 écritures. L'outil les classe par niveau de risque pour constituer un échantillon <strong>ciblé</strong> plutôt qu'aléatoire.</p>
+    <div class="flow"><span>Lecture du FEC</span><i>→</i><span>Conformité DGFiP</span><i>→</i><span>7 tests d'audit pondérés</span><i>→</i><span>Loi de Benford</span><i>→</i><span>Isolation Forest</span><i>→</i><span>Score de risque</span><i>→</i><span>Échantillon Excel</span></div>
+  </section>
+
+  
+  <section>
+    <h2>Le gain pour l'auditeur</h2>
+    <p class="lead">En contrôlant les 300 écritures les plus risquées, on retrouve 99,4 % des 170 anomalies injectées, contre 0,6 % au hasard. Les règles d'audit et le machine learning sont complémentaires : le ML seul est nettement moins efficace.</p>
+    <img src="img/courbe_capture.png" alt="Courbe de capture des anomalies">
+  </section>
+  
+
+  <section>
+    <h2>Loi de Benford : repérer des montants « inventés »</h2>
+    <p class="lead">Dans des données comptables naturelles, le premier chiffre des montants suit la loi de Benford (≈ 30 % de « 1 »). L'ensemble des achats est conforme (MAD 0,0059, conformité forte), mais en mesurant la contribution de chaque fournisseur à l'écart, <strong>F0037</strong> ressort en tête : ses montants commencent anormalement souvent par 7, 8 ou 9. C'est une piste d'investigation, pas une preuve.</p>
+    <img src="img/benford.png" alt="Distribution du premier chiffre comparée à la loi de Benford">
+  </section>
+
+  <section>
+    <h2>Top 20 des écritures à contrôler</h2>
+    <div class="scroll"><table>
+      <tr><th>Écriture</th><th>Date</th><th>Journal</th><th>Tiers</th><th class="n">Montant</th><th class="n">Score</th><th>Motifs</th></tr>
+      
+      <tr><td>ACH005308</td><td>03/11/2025</td><td>ACH</td><td>F0024</td>
+          <td class="n">4 876,16 €</td><td class="n">9.76</td><td>doublon, fractionnement</td></tr>
+      
+      <tr><td>ACH000593</td><td>03/02/2025</td><td>ACH</td><td>F0028</td>
+          <td class="n">4 514,37 €</td><td class="n">9.75</td><td>doublon, fractionnement</td></tr>
+      
+      <tr><td>ACH001861</td><td>14/04/2025</td><td>ACH</td><td>F0044</td>
+          <td class="n">15 099,29 €</td><td class="n">9.47</td><td>montant atypique, validation tardive</td></tr>
+      
+      <tr><td>ACH001304</td><td>14/03/2025</td><td>ACH</td><td>F0044</td>
+          <td class="n">45 630,00 €</td><td class="n">7.0</td><td>montant atypique</td></tr>
+      
+      <tr><td>VTE001362</td><td>28/02/2025</td><td>VTE</td><td></td>
+          <td class="n">1 465,21 €</td><td class="n">6.98</td><td>déséquilibre</td></tr>
+      
+      <tr><td>ACH003428</td><td>18/07/2025</td><td>ACH</td><td>F0036</td>
+          <td class="n">76,07 €</td><td class="n">6.6</td><td>doublon</td></tr>
+      
+      <tr><td>ACH005416</td><td>10/11/2025</td><td>ACH</td><td>F0005</td>
+          <td class="n">107,61 €</td><td class="n">6.44</td><td>doublon</td></tr>
+      
+      <tr><td>ACH002508</td><td>26/05/2025</td><td>ACH</td><td>F0044</td>
+          <td class="n">44 588,60 €</td><td class="n">6.41</td><td>montant atypique</td></tr>
+      
+      <tr><td>ACH000689</td><td>07/02/2025</td><td>ACH</td><td>F0029</td>
+          <td class="n">7 042,45 €</td><td class="n">6.38</td><td>montant atypique</td></tr>
+      
+      <tr><td>ACH003662</td><td>31/07/2025</td><td>ACH</td><td>F0017</td>
+          <td class="n">4 559,97 €</td><td class="n">6.35</td><td>fractionnement</td></tr>
+      
+      <tr><td>ACH004677</td><td>29/09/2025</td><td>ACH</td><td>F0023</td>
+          <td class="n">10 881,46 €</td><td class="n">6.3</td><td>doublon</td></tr>
+      
+      <tr><td>ACH000688</td><td>07/02/2025</td><td>ACH</td><td>F0021</td>
+          <td class="n">53 726,18 €</td><td class="n">6.3</td><td>montant atypique</td></tr>
+      
+      <tr><td>ACH003124</td><td>30/06/2025</td><td>ACH</td><td>F0035</td>
+          <td class="n">4 538,15 €</td><td class="n">6.29</td><td>fractionnement</td></tr>
+      
+      <tr><td>ACH002260</td><td>09/05/2025</td><td>ACH</td><td>F0017</td>
+          <td class="n">19 099,77 €</td><td class="n">6.27</td><td>montant atypique</td></tr>
+      
+      <tr><td>ACH004362</td><td>11/09/2025</td><td>ACH</td><td>F0019</td>
+          <td class="n">62,74 €</td><td class="n">6.24</td><td>doublon</td></tr>
+      
+      <tr><td>ACH003799</td><td>08/08/2025</td><td>ACH</td><td>F0014</td>
+          <td class="n">32 592,55 €</td><td class="n">6.22</td><td>montant atypique</td></tr>
+      
+      <tr><td>ACH002163</td><td>02/05/2025</td><td>ACH</td><td>F0039</td>
+          <td class="n">86 247,54 €</td><td class="n">6.22</td><td>montant atypique</td></tr>
+      
+      <tr><td>ACH000439</td><td>27/01/2025</td><td>ACH</td><td>F0005</td>
+          <td class="n">4 494,03 €</td><td class="n">6.2</td><td>montant atypique</td></tr>
+      
+      <tr><td>ACH003614</td><td>29/07/2025</td><td>ACH</td><td>F0015</td>
+          <td class="n">24 398,44 €</td><td class="n">6.18</td><td>montant atypique</td></tr>
+      
+      <tr><td>ACH000614</td><td>04/02/2025</td><td>ACH</td><td>F0005</td>
+          <td class="n">7 442,26 €</td><td class="n">6.18</td><td>montant atypique</td></tr>
+      
+    </table></div>
+  </section>
+
+  <section>
+    <h2>Résultats par test d'audit</h2>
+    
+    <p class="lead">Certains tests signalent plus d'écritures que d'anomalies injectées : c'est attendu. Une facture légitime peut tomber juste sous le seuil de validation ; c'est au contrôleur de trancher, l'outil lui dit où regarder.</p>
+    <div class="scroll"><table>
+      <tr><th>Test</th><th class="n">Injectées</th><th class="n">Signalées</th><th class="n">Trouvées</th><th class="n">Rappel</th></tr>
+      
+      <tr><td>Écriture déséquilibrée (débit ≠ crédit)</td><td class="n">15</td><td class="n">15</td><td class="n">15</td><td class="n">100 %</td></tr>
+      
+      <tr><td>Facture fournisseur saisie deux fois</td><td class="n">25</td><td class="n">25</td><td class="n">25</td><td class="n">100 %</td></tr>
+      
+      <tr><td>Factures fractionnées sous le seuil de validation</td><td class="n">30</td><td class="n">64</td><td class="n">30</td><td class="n">100 %</td></tr>
+      
+      <tr><td>Montant hors norme pour le fournisseur</td><td class="n">25</td><td class="n">66</td><td class="n">24</td><td class="n">96 %</td></tr>
+      
+      <tr><td>Validée plus de 60 jours après sa date</td><td class="n">25</td><td class="n">25</td><td class="n">25</td><td class="n">100 %</td></tr>
+      
+      <tr><td>OD manuelle à montant rond (≥ 1 000 €)</td><td class="n">20</td><td class="n">20</td><td class="n">20</td><td class="n">100 %</td></tr>
+      
+      <tr><td>Passée un week-end ou un jour férié</td><td class="n">30</td><td class="n">30</td><td class="n">30</td><td class="n">100 %</td></tr>
+      
+    </table></div>
+    
+  </section>
+
+  <section>
+    <h2>Conformité du fichier</h2>
+    <p class="lead">2 contrôle(s) en échec sur 15.</p>
+    <div class="scroll"><table>
+      <tr><th>Contrôle</th><th>Détail</th><th>Statut</th></tr>
+      
+      <tr><td>18 colonnes réglementaires présentes</td><td>Toutes présentes</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ JournalCode renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ JournalLib renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ EcritureNum renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ EcritureDate renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ CompteNum renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ CompteLib renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ PieceRef renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ PieceDate renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ EcritureLib renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Champ ValidDate renseigné</td><td>0 ligne(s) vide(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Chaque écriture est équilibrée</td><td>15 écriture(s) déséquilibrée(s)</td><td><span class="tag ko">KO</span></td></tr>
+      
+      <tr><td>Balance générale équilibrée</td><td>Écart total : -720.55 €</td><td><span class="tag ko">KO</span></td></tr>
+      
+      <tr><td>Numérotation chronologique par journal</td><td>0 rupture(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+      <tr><td>Date de validation ≥ date d'écriture</td><td>0 ligne(s) incohérente(s)</td><td><span class="tag ok">OK</span></td></tr>
+      
+    </table></div>
+  </section>
+
+</div></main>
+<footer>Projet réalisé par <a href="https://ismaildataa.github.io">Ismail Yahyaoui</a> — Data Analyst · Python · Statistiques · Audit analytique</footer>
+</body>
+</html>
